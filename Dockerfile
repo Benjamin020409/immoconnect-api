@@ -13,7 +13,7 @@ COPY . .
 RUN composer dump-autoload --optimize --no-dev
 
 # ---- Étape 2 : Image finale avec PHP-FPM + Nginx ----
-FROM php:8.2-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Dépendances système + extensions PHP nécessaires pour Laravel
 RUN apk add --no-cache \
