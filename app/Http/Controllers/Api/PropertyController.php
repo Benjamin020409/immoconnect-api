@@ -7,6 +7,7 @@ use App\Models\Property;
 use App\Traits\SubscriptionCheckTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Services\CloudinaryService;
 
 class PropertyController extends Controller
 {
@@ -128,14 +129,21 @@ class PropertyController extends Controller
         ]);
 
         if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $i => $image) {
-                $path = $image->store('properties', 'public');
-                $property->images()->create([
-                    'path'     => $path,
-                    'is_cover' => $i === 0,
-                ]);
-            }
+    foreach ($request->file('images') as $i => $image) {
+        if (app()->environment('production')) {
+            $cloudinaryService = new CloudinaryService();
+            $result = $cloudinaryService->upload($image->getRealPath());
+            $imagePath = $result['url'];
+        } else {
+            $imagePath = $image->store('properties', 'public');
         }
+
+        $property->images()->create([
+            'path'     => $imagePath,
+            'is_cover' => $i === 0,
+        ]);
+    }
+}
 
         // ✅ Ajouter les infos de quota dans la réponse
         return response()->json([
@@ -188,8 +196,12 @@ class PropertyController extends Controller
             ->firstOrFail();
 
         foreach ($property->images as $image) {
-            Storage::disk('public')->delete($image->path);
-        }
+    if (str_starts_with($image->path, 'http')) {
+        // Image Cloudinary — suppression à implémenter plus tard si besoin
+        continue;
+    }
+    Storage::disk('public')->delete($image->path);
+}
 
         $property->delete();
 
